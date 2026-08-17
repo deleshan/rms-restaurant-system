@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand: 99 102 241;
+    --scrollbar-thumb: rgba(15, 23, 42, 0.1);
+    --scrollbar-hover: rgba(15, 23, 42, 0.2);
+    --nprogress-bar: #6366f1;
+    --app-bg: #f8fafc; /* Light Mode */
+  }
+
+  html.dark, .dark {
+    --brand: 129 140 248;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.08);
+    --scrollbar-hover: rgba(255, 255, 255, 0.15);
+    --nprogress-bar: #818cf8;
+    --app-bg: #020617; /* Dark Mode */
+  }
+
+  body {
+    @apply transition-colors duration-500 antialiased;
+    background-color: var(--app-bg);
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Global Scrollbar - Ultra Minimalist */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 100px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+  background-clip: content-box;
+}
+
+/* NProgress Customization */
+#nprogress .bar {
+  background: var(--nprogress-bar) !important;
+  height: 3px !important;
+  box-shadow: 0 0 15px rgba(var(--brand), 0.5);
+  @apply transition-all duration-300;
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px var(--nprogress-bar), 0 0 5px var(--nprogress-bar) !important;
+}
+
+/* Selection Highlight */
+::selection {
+  background: rgba(var(--brand), 0.2);
+  color: inherit;
+}
