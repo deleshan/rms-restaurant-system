@@ -490,27 +490,35 @@ exports.getOrderById = async (req, res) => {
 };
 
 /**
- * @desc    Get current and past orders for a customer by phone
- * @route   GET /api/orders/customer/:phone
+ * @desc    Get current and past orders for a customer by phone, scoped to a restaurant
+ * @route   GET /api/orders/customer/:phone?restaurantId=...
  * @access  Public
  */
 exports.getCustomerOrders = async (req, res) => {
   try {
     const normalizedPhone = req.params.phone.replace(/\D/g, '');
-    const customer = await Customer.findOne({ phone: normalizedPhone });
+    const { restaurantId } = req.query;
+
+    if (!restaurantId) {
+      return res.status(400).json({ success: false, message: 'restaurantId is required' });
+    }
+
+    // Must match the SAME phone+restaurant pair the customer registered under —
+    // otherwise this returns another restaurant's identity for this phone.
+    const customer = await Customer.findOne({ phone: normalizedPhone, restaurantId });
 
     if (!customer) {
       return res.status(200).json({ success: true, current: null, past: [] });
     }
 
-    const orders = await Order.find({ user: customer._id })
+    const orders = await Order.find({ user: customer._id, restaurantId })
       .sort({ createdAt: -1 })
       .populate('user', 'name phone email');
 
     res.status(200).json({
       success: true,
-      current: orders.find(o => ['Pending','Preparing','Ready'].includes(o.status)) || null,
-      past:    orders.filter(o => ['Completed','Cancelled'].includes(o.status)),
+      current: orders.find(o => ['Pending', 'Preparing', 'Ready'].includes(o.status)) || null,
+      past:    orders.filter(o => ['Completed', 'Cancelled'].includes(o.status)),
     });
   } catch (error) {
     console.error('Get customer orders error:', error);

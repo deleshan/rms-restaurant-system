@@ -71,3 +71,8 @@ export const selectIsReadyForMenu = createSelector(
   [selectIsAuthenticated, selectTableId, selectRestaurantId],
   (isAuth, tableId, restaurantId) => isAuth && !!tableId && !!restaurantId
 );
+
+export const selectCustomerHomeRestaurantId = createSelector(
+  [selectAuth],
+  (auth) => auth.customerHomeRestaurantId
+);

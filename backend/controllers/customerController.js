@@ -5,8 +5,6 @@ const Customer = require('../models/Customer');
 // @access  Public
 const registerCustomer = async (req, res) => {
   try {
-    console.log('=== registerCustomer called ===');
-    console.log('body:', req.body);
     const { name, phone, email, homeAddress, dateOfBirth, tableId, restaurantId } = req.body;
 
     if (!name || !phone || !restaurantId) {
@@ -15,70 +13,70 @@ const registerCustomer = async (req, res) => {
 
     const normalizedPhone = phone.replace(/\D/g, '');
 
-    // Check if customer already exists
-    const existingCustomer = await Customer.findOne({ phone: normalizedPhone, restaurantId });
-    console.log('existingCustomer:', existingCustomer ? {
-      id: existingCustomer._id,
-      dateOfBirth: existingCustomer.dateOfBirth,
-      email: existingCustomer.email
-    } : 'NOT FOUND');
+    // Pre-sanitize optional fields ourselves. A typo'd email or a bad DOB
+    // must never fail the whole check-in — we just drop the bad value.
+    const safeEmail = email && validator.isEmail(email.trim()) ? email.trim().toLowerCase() : null;
+    const safeDOB = dateOfBirth && new Date(dateOfBirth) <= new Date() ? dateOfBirth : null;
+    const safeAddress = homeAddress?.trim() ? validator.escape(homeAddress.trim()) : null;
 
+    const existingCustomer = await Customer.findOne({ phone: normalizedPhone, restaurantId });
 
     let customer;
 
     if (existingCustomer) {
-      // RETURNING CUSTOMER
-      // Only update fields that are safe to always update
-      // NEVER overwrite email/DOB with null — preserve existing values
+      // RETURNING CUSTOMER — always accept whatever name they typed this time,
+      // even if it doesn't match what's on file. Never reject on mismatch.
       const updateFields = {
         name: name.trim(),
         lastVisit: new Date(),
       };
-
-      if (homeAddress?.trim()) updateFields.homeAddress = homeAddress.trim();
-
-      // Only update email if user provided one AND customer has none
-      if (email?.trim() && !existingCustomer.email) {
-        updateFields.email = email.trim().toLowerCase();
-      }
-
-      // Only update DOB if user provided one AND customer has none
-      if (dateOfBirth && !existingCustomer.dateOfBirth) {
-        updateFields.dateOfBirth = dateOfBirth;
-      }
+      if (safeAddress) updateFields.homeAddress = safeAddress;
+      if (safeEmail && !existingCustomer.email) updateFields.email = safeEmail;
+      if (safeDOB && !existingCustomer.dateOfBirth) updateFields.dateOfBirth = safeDOB;
 
       customer = await Customer.findOneAndUpdate(
         { phone: normalizedPhone, restaurantId },
-        { 
-          $set: updateFields,
-        },
-        { new: true }  // returns updated doc with ALL fields including existing email/DOB
+        { $set: updateFields },
+        { new: true }
       );
-
     } else {
-      // NEW CUSTOMER
-      customer = await Customer.create({
-        name: name.trim(),
-        phone: normalizedPhone,
-        restaurantId,
-        email: email ? email.trim().toLowerCase() : null,
-        dateOfBirth: dateOfBirth || null,
-        homeAddress: homeAddress ? homeAddress.trim() : null,
-        lastVisit: new Date(),
-        totalOrders: 1,
-        totalSpent: 0,
-      });
+      // NEW CUSTOMER at this restaurant
+      try {
+        customer = await Customer.create({
+          name: name.trim(),
+          phone: normalizedPhone,
+          restaurantId,
+          email: safeEmail,
+          dateOfBirth: safeDOB,
+          homeAddress: safeAddress,
+          lastVisit: new Date(),
+          totalOrders: 1,
+          totalSpent: 0,
+        });
+      } catch (createErr) {
+        // Genuine race (two simultaneous first-time check-ins for the same
+        // phone+restaurant) hits the compound unique index. Recover instead
+        // of failing — treat it as a returning customer.
+        if (createErr.code === 11000) {
+          customer = await Customer.findOneAndUpdate(
+            { phone: normalizedPhone, restaurantId },
+            { $set: { name: name.trim(), lastVisit: new Date() } },
+            { new: true, upsert: true }
+          );
+        } else {
+          throw createErr;
+        }
+      }
     }
 
-    // Always return full customer object including existing email/DOB
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       customer: {
         _id: customer._id,
         name: customer.name,
         phone: customer.phone,
-        email: customer.email,             
-        dateOfBirth: customer.dateOfBirth, 
+        email: customer.email,
+        dateOfBirth: customer.dateOfBirth,
         homeAddress: customer.homeAddress,
         segment: customer.segment,
         loyaltyPoints: customer.loyaltyPoints,
@@ -86,12 +84,8 @@ const registerCustomer = async (req, res) => {
         tableId,
       },
     });
-
   } catch (error) {
     console.error('Register customer error:', error);
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'This phone number is already registered at this restaurant.' });
-    }
     res.status(500).json({ message: 'Server error. Please try again.' });
   }
 };
@@ -123,6 +117,7 @@ const getCustomerByPhone = async (req, res) => {
         email: customer.email,
         homeAddress: customer.homeAddress,
         dateOfBirth: customer.dateOfBirth,
+        restaurantId: customer.restaurantId,
         totalOrders: customer.totalOrders,
         totalSpent: customer.totalSpent,
         segment: customer.segment,

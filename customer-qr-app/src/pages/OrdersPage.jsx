@@ -13,7 +13,7 @@ import {
   selectOrderProgressStep,
   selectIsPaid,
 } from '../features/orders/orderSelectors';
-import { selectCustomer, selectTableId } from '../features/auth/authSelectors';
+import { selectCustomer, selectTableId, selectRestaurantId } from '../features/auth/authSelectors';
 
 const STATUS_STEPS = ['Pending', 'Preparing', 'Ready', 'Served'];
 
@@ -34,17 +34,18 @@ const OrdersPage = () => {
   const tableId      = useSelector(selectTableId);
   const progressStep = useSelector(selectOrderProgressStep);
   const isPaid       = useSelector(selectIsPaid);
+  const restaurantId = useSelector(selectRestaurantId);
 
   // Prevent double fetch on strict mode / re-renders
   const hasFetched = useRef(false);
 
   // Fetch orders once on mount 
   useEffect(() => {
-    if (customer?.phone && !hasFetched.current) {
+    if (customer?.phone && restaurantId && !hasFetched.current) {
       hasFetched.current = true;
-      dispatch(fetchCustomerOrders(customer.phone));
+      dispatch(fetchCustomerOrders({ phone: customer.phone, restaurantId }));
     }
-  }, []);
+  }, [customer?.phone, restaurantId]);
 
 
   useEffect(() => {

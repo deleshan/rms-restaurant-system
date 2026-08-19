@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchProfile, updateProfile } from '../features/profile/profileThunks';
 import { selectProfileState } from '../features/profile/profileSelector';
+import { selectRestaurantId } from '../features/auth/authSelectors';
 import api from '../utils/api';
 import { persistor } from '../store/store';
 
@@ -13,6 +14,7 @@ const ProfilePage = () => {
   
   // Redux state
   const { profile, points, tier, loading } = useSelector(selectProfileState);
+  const restaurantId = useSelector(selectRestaurantId);
 
   // Local UI State
   const [isEditing, setIsEditing] = useState(false);
@@ -24,24 +26,22 @@ const ProfilePage = () => {
 
   // Initial Data Fetch
   useEffect(() => {
-    if (profile.phone) {
+    if (profile.phone && restaurantId) {
       dispatch(fetchProfile(profile.phone));
       fetchHistory();
     }
-  }, [dispatch, profile.phone]);
+  }, [dispatch, profile.phone, restaurantId]);
 
   const fetchHistory = async () => {
+    if (!profile.phone || !restaurantId) return;
+
     setOrdersLoading(true);
     try {
-      const response = await api.getCustomerOrders(profile.phone);
-      
-      const rawData = response.data || response; 
-
-      console.log("Setting Orders State with:", rawData);
-
+      const response = await api.getCustomerOrders(profile.phone, restaurantId);
+      const rawData = response.data || response;
       setOrders({
-        active: Array.isArray(rawData.active) ? rawData.active : [],
-        past: Array.isArray(rawData.past) ? rawData.past : []
+        active: rawData.current ? [rawData.current] : [],
+        past: Array.isArray(rawData.past) ? rawData.past : [],
       });
     } catch (err) {
       console.error('History fetch error:', err);

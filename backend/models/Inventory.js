@@ -88,7 +88,7 @@ const InventorySchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Produce', 'Meat', 'Dairy', 'Spices', 'Grains', 'Beverages', 'Dry Goods', 'Packaging', 'Assets', 'Other'],
+    enum: ['Produce', 'Meat', 'Dairy', 'Spices', 'Grains', 'Beverages', 'Dry Goods', 'Packaging', 'Assets', 'Other', 'Butter & Spread'],
     default: 'Other',
   },
   restaurantId: {

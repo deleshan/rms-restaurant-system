@@ -49,7 +49,7 @@ const getUSDAFoodById = async (fdcId) => {
       fdcId:    food.fdcId,
       name:     food.description,
       category: mapUSDACategory(food.foodCategory?.description || ''),
-      unit:     'g',
+      unit:     'Kg',
       nutrients: {
         calories: getNutrient(food.foodNutrients, 'Energy'),
         protein:  getNutrient(food.foodNutrients, 'Protein'),

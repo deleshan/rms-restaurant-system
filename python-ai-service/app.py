@@ -65,18 +65,35 @@ NEGATIVE_TRIGGERS = {
 }
  
 
-def split_into_clauses(text: str) -> list[str]:
+def split_into_clauses(text: str, menu_items: list = None) -> list[str]:
     raw_clauses = re.split(
         r'[,;]|\bbut\b|\bhowever\b|\bthough\b|\bwhile\b|\balthough\b|\byet\b|\band\b',
         text,
         flags=re.IGNORECASE
     )
     raw_clauses = [c.strip() for c in raw_clauses if c.strip()]
+    menu_items = menu_items or []
+    sorted_items = sorted(menu_items, key=len, reverse=True)  # longest names first
+
     merged = []
     buffer = ""
     for clause in raw_clauses:
         doc = nlp(clause)
-        has_predicate = any(tok.pos_ in ("VERB", "AUX") for tok in doc)
+
+        clause_lower = clause.lower()
+        item_spans = []
+        for food in sorted_items:
+            food_lower = food.lower()
+            for m in re.finditer(rf'\b{re.escape(food_lower)}\b', clause_lower):
+                item_spans.append(m.span())
+
+        def _inside_item_span(token):
+            return any(s <= token.idx < e for s, e in item_spans)
+
+        has_predicate = any(
+            tok.pos_ in ("VERB", "AUX") and not _inside_item_span(tok)
+            for tok in doc
+        )
 
         if not has_predicate:
             buffer = f"{buffer} {clause}".strip() if buffer else clause
@@ -94,16 +111,23 @@ def split_into_clauses(text: str) -> list[str]:
  
 def split_clause_by_items(clause: str, menu_items: list) -> list:
     """
-    If a clause mentions 2+ menu items with no conjunction between them
-    (e.g. "Mango Lassi is good Paneer Butter Masala is not good"),
-    split it at each item's starting position so each dish gets its
-    own independently-scored segment.
-    Returns [(None, clause)] if 0 or 1 items found (no split needed —
+    If a clause mentions 2+ menu items, split it into one segment per item.
+
+    Handles two patterns:
+    1. "Item1 is great, Item2 is bad" - each item already has its own
+       descriptive text right after it. Used as-is.
+    2. "Item1 and Item2 good" / "both Item1 and Item2 good" - elliptical
+       coordination where the descriptor only appears once, after the LAST
+       item, but applies to every item in the group. Earlier items with no
+       descriptor of their own borrow the nearest one to their right instead
+       of being scored as bare/neutral.
+
+    Returns [(None, clause)] if 0 or 1 items found (no split needed -
     caller falls back to existing single-clause scoring).
     """
     sorted_items = sorted(menu_items, key=len, reverse=True)  # longest names first, avoids partial overlaps
     clause_lower = clause.lower()
-    matches = []
+    matches = []       # (start, end, food)
     used_spans = []
 
     for food in sorted_items:
@@ -112,19 +136,38 @@ def split_clause_by_items(clause: str, menu_items: list) -> list:
             start, end = m.span()
             if any(s <= start < e or s < end <= e for s, e in used_spans):
                 continue  # skip overlap with an already-matched longer item name
-            matches.append((start, food))
+            matches.append((start, end, food))
             used_spans.append((start, end))
 
     if len(matches) < 2:
         return [(None, clause)]
 
     matches.sort(key=lambda x: x[0])
-    segments = []
-    for i, (start, food) in enumerate(matches):
-        end = matches[i + 1][0] if i + 1 < len(matches) else len(clause)
-        segments.append((food, clause[start:end].strip()))
 
-    return segments 
+    # Text strictly between this item's name and the next item's name
+    # (or clause end for the last item).
+    descriptors = []
+    for i, (start, end, food) in enumerate(matches):
+        seg_end = matches[i + 1][0] if i + 1 < len(matches) else len(clause)
+        descriptors.append(clause[end:seg_end].strip())
+
+    # Backward-fill: an item with no descriptor of its own (pure coordination,
+    # e.g. "Item1 and Item2 good") borrows the nearest descriptor to its right
+    # instead of being scored on its bare name alone.
+    filled = descriptors[:]
+    next_descriptor = ''
+    for i in range(len(filled) - 1, -1, -1):
+        if filled[i]:
+            next_descriptor = filled[i]
+        else:
+            filled[i] = next_descriptor
+
+    segments = []
+    for (start, end, food), desc in zip(matches, filled):
+        segment_text = f"{food} {desc}".strip() if desc else food
+        segments.append((food, segment_text))
+
+    return segments
 
 # Routes
  
@@ -162,7 +205,7 @@ def analyze_bulk_reviews():
             # This prevents a negative word in one clause from dragging down
             # the sentiment score of a different dish in another clause.
             food_analysis = []
-            clauses = split_into_clauses(text)
+            clauses = split_into_clauses(text, menu_items)
  
             for clause in clauses:
                 item_segments = split_clause_by_items(clause, menu_items)
@@ -265,7 +308,8 @@ def analyze_menu_item():
         NEGATION_WORDS = {'not', "n't", 'no', 'never', 'without'}
 
         for text in reviews:
-            clauses = split_into_clauses(text)
+            matching_clauses_source = split_into_clauses(text, [item_name] if item_name else None)  # was: split_into_clauses(text)
+            clauses = matching_clauses_source
 
             # Only analyze clauses that actually mention this specific item.
             # Without this filter, a review rating 3 dishes contributes its

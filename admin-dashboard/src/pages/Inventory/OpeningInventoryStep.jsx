@@ -11,6 +11,8 @@ const OpeningInventoryStep = ({ addedCount, onValueAdded }) => {
   const [uploading, setUploading] = useState(false);
   const [needsReview, setNeedsReview] = useState([]);
   const [lastMessage, setLastMessage] = useState('');
+  const [skippedNames, setSkippedNames] = useState([]);
+  const [ledgerWarning, setLedgerWarning] = useState('');
   const [error, setError] = useState('');
 
   const handleFile = (file) => {
@@ -25,6 +27,7 @@ const OpeningInventoryStep = ({ addedCount, onValueAdded }) => {
     if (!selectedFile) return;
     setUploading(true);
     setError('');
+    setLedgerWarning('');
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('isInitialSetup', 'true');
@@ -40,6 +43,8 @@ const OpeningInventoryStep = ({ addedCount, onValueAdded }) => {
     const payload = result.payload;
     setSelectedFile(null);
     setLastMessage(payload?.message || '');
+    setSkippedNames(payload?.skippedNames || []);
+    if (payload?.ledgerWarning) setLedgerWarning(payload.ledgerWarning);
     if (payload?.openingValueAdded) onValueAdded(payload.openingValueAdded, payload.autoImported || 0);
     if (payload?.needsReview?.length > 0) setNeedsReview(payload.needsReview);
   };
@@ -50,6 +55,7 @@ const OpeningInventoryStep = ({ addedCount, onValueAdded }) => {
       isInitialSetup: true,
     }));
     if (!result.type.endsWith('/rejected')) {
+      if (result.payload?.ledgerWarning) setLedgerWarning(result.payload.ledgerWarning);
       if (result.payload?.valueAdded) onValueAdded(result.payload.valueAdded, 1);
       setNeedsReview((prev) => prev.filter((r) => r !== ri));
     }
@@ -146,6 +152,22 @@ const OpeningInventoryStep = ({ addedCount, onValueAdded }) => {
         >
           {uploading ? 'Uploading…' : 'Upload & Match'}
         </Button>
+      )}
+      {lastMessage && !needsReview.length && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+          <CheckCircle2 className="text-emerald-500" size={18} />
+          <p className="text-sm font-bold text-emerald-900">{lastMessage}</p>
+        </div>
+      )}
+      {skippedNames.length > 0 && !needsReview.length && (
+        <p className="text-xs text-amber-600 font-bold ml-1">
+          Already existed: {skippedNames.join(', ')}
+        </p>
+      )}
+      {ledgerWarning && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-700 text-xs font-bold flex items-start gap-2">
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {ledgerWarning}
+        </div>
       )}
 
       <p className="text-xs text-slate-400 font-medium flex items-center gap-2">

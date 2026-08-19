@@ -1,19 +1,17 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { submitInitialForm, fetchCustomerByPhone } from './authThunks';
 
-
 const savedCustomer = JSON.parse(localStorage.getItem('customer') || 'null');
 
 const initialState = {
   restaurantId: localStorage.getItem('restaurantId') || null,
   tableId: localStorage.getItem('tableId') || null,
-  // User Data
   name: savedCustomer?.name || '',
   phone: savedCustomer?.phone || '',
   email: savedCustomer?.email || '',
   dateOfBirth: savedCustomer?.dateOfBirth || null,
   address: savedCustomer?.homeAddress || savedCustomer?.address || null,
-  // UI State
+  customerHomeRestaurantId: savedCustomer?.restaurantId || null,
   isAuthenticated: !!savedCustomer,
   loading: false,
   error: null,
@@ -24,14 +22,15 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setCredentials: (state, action) => {
-      const { name, phone, email, dateOfBirth, homeAddress, address } = action.payload;
+      const { name, phone, email, dateOfBirth, homeAddress, address, restaurantId } = action.payload;
       state.name = name;
       state.phone = phone;
       state.email = email || '';
       state.dateOfBirth = dateOfBirth || null;
       state.address = homeAddress || address || null;
       state.isAuthenticated = true;
-      
+      if (restaurantId) state.customerHomeRestaurantId = restaurantId;
+
       localStorage.setItem('customer', JSON.stringify(action.payload));
     },
     setTableId: (state, action) => {
@@ -39,8 +38,24 @@ const authSlice = createSlice({
       localStorage.setItem('tableId', action.payload);
     },
     setRestaurantId: (state, action) => {
-      state.restaurantId = action.payload;
-      localStorage.setItem('restaurantId', action.payload);
+      const newRestaurantId = action.payload;
+      if (
+        state.customerHomeRestaurantId &&
+        newRestaurantId &&
+        state.customerHomeRestaurantId !== newRestaurantId
+      ) {
+        state.isAuthenticated = false;
+        state.name = '';
+        state.phone = '';
+        state.email = '';
+        state.dateOfBirth = null;
+        state.address = null;
+        state.customerHomeRestaurantId = null;
+        localStorage.removeItem('customer');
+      }
+
+      state.restaurantId = newRestaurantId;
+      localStorage.setItem('restaurantId', newRestaurantId);
     },
     logout: (state) => {
       localStorage.clear();
@@ -50,6 +65,7 @@ const authSlice = createSlice({
       state.email = '';
       state.dateOfBirth = null;
       state.address = null;
+      state.customerHomeRestaurantId = null;
       state.isAuthenticated = false;
       state.error = null;
     },
@@ -71,36 +87,13 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      
-      //Handle submitInitialForm (Registration/Login)
       .addCase(submitInitialForm.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(submitInitialForm.fulfilled, (state, action) => {
-        const { name, phone, email, dateOfBirth, homeAddress } = action.payload.customer;
-        
-        state.loading = false;
-        state.isAuthenticated = true;
-        state.name = name;
-        state.phone = phone;
-        state.email = email || '';
-        state.dateOfBirth = dateOfBirth || null;
-        state.address = homeAddress || null; 
-        
-        localStorage.setItem('customer', JSON.stringify(action.payload.customer));
-      })
-      .addCase(submitInitialForm.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Authentication failed'; 
-      })
+        const { name, phone, email, dateOfBirth, homeAddress, restaurantId } = action.payload.customer;
 
-      .addCase(fetchCustomerByPhone.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(fetchCustomerByPhone.fulfilled, (state, action) => {
-        const { name, phone, email, dateOfBirth, homeAddress } = action.payload.customer;
-        
         state.loading = false;
         state.isAuthenticated = true;
         state.name = name;
@@ -108,24 +101,46 @@ const authSlice = createSlice({
         state.email = email || '';
         state.dateOfBirth = dateOfBirth || null;
         state.address = homeAddress || null;
-        
+        state.customerHomeRestaurantId = restaurantId || state.restaurantId;
+
+        localStorage.setItem('customer', JSON.stringify(action.payload.customer));
+      })
+      .addCase(submitInitialForm.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Authentication failed';
+      })
+
+      .addCase(fetchCustomerByPhone.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchCustomerByPhone.fulfilled, (state, action) => {
+        const { name, phone, email, dateOfBirth, homeAddress, restaurantId } = action.payload.customer;
+
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.name = name;
+        state.phone = phone;
+        state.email = email || '';
+        state.dateOfBirth = dateOfBirth || null;
+        state.address = homeAddress || null;
+        state.customerHomeRestaurantId = restaurantId || state.restaurantId;
+
         localStorage.setItem('customer', JSON.stringify(action.payload.customer));
       })
       .addCase(fetchCustomerByPhone.rejected, (state) => {
         state.loading = false;
-      })
-
+      });
   },
 });
 
-export const { 
+export const {
   setCredentials,
-  setTableId, 
-  setRestaurantId, 
-  logout, 
+  setTableId,
+  setRestaurantId,
+  logout,
   clearAuthError,
   updateCustomerEmail,
-  updateCustomerDOB
+  updateCustomerDOB,
 } = authSlice.actions;
 
 export default authSlice.reducer;

@@ -54,9 +54,9 @@ export const fetchOrderById = createAsyncThunk(
  */
 export const fetchCustomerOrders = createAsyncThunk(
   'order/fetchCustomerOrders',
-  async (phone, { rejectWithValue }) => {
+  async ({ phone, restaurantId }, { rejectWithValue }) => {
     try {
-      const data = await apiService.getCustomerOrders(phone);
+      const data = await apiService.getCustomerOrders(phone, restaurantId);
 
       return {
         current: data.current || null,
@@ -74,9 +74,9 @@ export const fetchCustomerOrders = createAsyncThunk(
  */
 export const fetchCurrentOrder = createAsyncThunk(
   'order/fetchCurrentOrder',
-  async (phone, { rejectWithValue }) => {
+  async ({ phone, restaurantId }, { rejectWithValue }) => {
     try {
-      const data = await apiService.getCustomerOrders(phone);
+      const data = await apiService.getCustomerOrders(phone, restaurantId);
       return data.current || null;
     } catch (error) {
       return rejectWithValue(error);
@@ -90,9 +90,9 @@ export const fetchCurrentOrder = createAsyncThunk(
  */
 export const fetchPastOrders = createAsyncThunk(
   'order/fetchPastOrders',
-  async (phone, { rejectWithValue }) => {
+  async ({ phone, restaurantId }, { rejectWithValue }) => {
     try {
-      const data = await apiService.getCustomerOrders(phone);
+      const data = await apiService.getCustomerOrders(phone, restaurantId);
       return data.past || [];
     } catch (error) {
       return rejectWithValue(error);

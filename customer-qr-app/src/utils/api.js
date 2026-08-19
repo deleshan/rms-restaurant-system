@@ -100,8 +100,8 @@ export const apiService = {
    * Returns: { success, current: {} | null, past: [] }
    * GET /api/orders/customer/:phone
    */
-  getCustomerOrders: (phone) =>
-    api.get(`/orders/customer/${phone}`),
+  getCustomerOrders: (phone, restaurantId) =>
+    api.get(`/orders/customer/${phone}`, { params: { restaurantId } }),
 
   /**
    * Request the bill for an order

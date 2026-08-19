@@ -87,7 +87,7 @@ const OrderCard = ({ order, onUpdateStatus, viewMode = 'grid' }) => {
                       <div className="mt-2 flex flex-wrap gap-1">
                         {item.customizations.map((mod, i) => (
                           <span key={i} className="bg-rose-500/10 text-rose-500 text-[11px] font-black px-2 py-0.5 rounded-md border border-rose-500/20 uppercase">
-                            NO {mod}
+                            {mod}
                           </span>
                         ))}
                       </div>

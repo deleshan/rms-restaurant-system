@@ -8,6 +8,7 @@ import { selectFilteredInventory } from '@/features/inventory/inventorySelector'
 import { clearMenuStatus } from '@/features/menu/menuSlice';
 import Button from '@/components/common/Button';
 import Select from '@/components/ui/Select';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import { cn } from '@/utils/cn';
 
 const UNITS = ['g', 'kg', 'ml', 'l', 'pcs', 'tbsp', 'tsp', 'cup'];
@@ -136,13 +137,10 @@ const RecipeBuilderModal = ({ isOpen, onClose, menuItem }) => {
     );
   };
 
-  const inventoryOptions = [
-    { value: '', label: '— Select ingredient —' },
-    ...inventoryItems.map((item) => ({
-      value: item._id || item.id,
-      label: `${item.name} (${item.currentStock} ${item.unit})`,
-    })),
-  ];
+  const inventoryOptions = inventoryItems.map((item) => ({
+    value: item._id || item.id,
+    label: `${item.name} (${item.currentStock} ${item.unit})`,
+  }));
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -220,11 +218,12 @@ const RecipeBuilderModal = ({ isOpen, onClose, menuItem }) => {
                     
                     {/* Inventory Item Select */}
                     <div className="flex-1">
-                      <Select
+                      <SearchableSelect
                         value={ing.inventoryItem}
                         onChange={(val) => updateIngredient(idx, 'inventoryItem', val)}
                         options={inventoryOptions}
-                        className="bg-white border-slate-200 rounded-xl text-sm h-10"
+                        placeholder="— Select ingredient —"
+                        className="h-10 text-sm"
                       />
                     </div>
 
@@ -348,11 +347,12 @@ const RecipeBuilderModal = ({ isOpen, onClose, menuItem }) => {
                       {cust.ingredientEffects.map((eff, eIdx) => (
                         <div key={eIdx} className="flex items-center gap-2">
                           <div className="flex-1">
-                            <Select
+                            <SearchableSelect
                               value={eff.inventoryItem}
                               onChange={(val) => updateEffect(cIdx, eIdx, 'inventoryItem', val)}
                               options={inventoryOptions}
-                              className="bg-white border-slate-200 rounded-xl text-xs h-9"
+                              placeholder="— Select —"
+                              className="h-9 text-xs"
                             />
                           </div>
                           <input

@@ -110,6 +110,8 @@ const FinancialTransactionsPage = ({settings}) => {
           Investment_Out: { variant: 'warning', label: 'Placed Capital Out', icon: <MoveRight size={12} /> },
           Owner_Investment: { variant: 'success', label: 'Owner Equity In', icon: <Briefcase size={12} /> },
           Owner_Drawing: { variant: 'danger', label: 'Owner Drawing', icon: <HandCoins size={12} /> },
+          Opening_Loan: { variant: 'outline', label: 'Opening Loan Balance', icon: <Building2 size={12} /> },
+          Opening_Capital: { variant: 'outline', label: 'Opening Capital Balance', icon: <Briefcase size={12} /> },
         };
         const target = typeVariants[row.type] || { variant: 'outline', label: row.type, icon: null };
         return (
@@ -140,9 +142,15 @@ const FinancialTransactionsPage = ({settings}) => {
   // Filter local rows on matching structural properties to avoid hitting endpoints on tab switch
   const filteredTransactions = useMemo(() => {
     if (activeTab === 'all') return transactions;
-    if (activeTab === 'loans') return transactions.filter(t => t.type.startsWith('Loan_'));
-    if (activeTab === 'investments') return transactions.filter(t => t.type.includes('Investment_'));
-    if (activeTab === 'equity') return transactions.filter(t => t.type.startsWith('Owner_'));
+    if (activeTab === 'loans') {
+      return transactions.filter(t => t.type.startsWith('Loan_') || t.type === 'Opening_Loan');
+    }
+    if (activeTab === 'investments') {
+      return transactions.filter(t => t.type.includes('Investment_'));
+    }
+    if (activeTab === 'equity') {
+      return transactions.filter(t => t.type.startsWith('Owner_') || t.type === 'Opening_Capital');
+    }
     return transactions;
   }, [transactions, activeTab]);
 

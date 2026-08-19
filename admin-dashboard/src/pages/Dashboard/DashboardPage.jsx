@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp, ShoppingCart, DollarSign, Users, BrainCircuit,
   Sparkles, Zap, LayoutGrid, AlertTriangle, CheckCircle2, Activity,
-  Cpu, RefreshCw
+  Cpu, RefreshCw, Wallet
 } from 'lucide-react';
 
 // Socket 
@@ -17,7 +18,10 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/common/Button';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import ErrorMessage from '@/components/common/ErrorBoundary';
+import { fetchFinanceOverview } from '@/features/finance/financeThunks';
+import { selectFinanceOverview } from '@/features/finance/financeSelector';
 import { cn } from '@/utils/cn';
+
 
 // Selectors & Thunks
 import {
@@ -82,6 +86,7 @@ const TABLE_STATUS_CONFIG = {
 // DASHBOARD PAGE 
 const DashboardPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const user            = useSelector(selectUser);
   const restaurantId    = user?.restaurantId;
@@ -90,6 +95,9 @@ const DashboardPage = () => {
   const error           = useSelector(selectDashboardError);
   const allTables       = useSelector(selectActiveTables)    || [];
   const inventoryAlerts = useSelector(selectInventoryAlerts) || [];
+  const financeOverview = useSelector(selectFinanceOverview);
+
+  const isInitialized = financeOverview?.isInitialized ?? true;
 
   // Tracks last sync time for the live indicator
   const [lastSynced, setLastSynced]     = useState(null);
@@ -98,6 +106,7 @@ const DashboardPage = () => {
   // INITIAL FETCH 
   useEffect(() => {
     dispatch(fetchDashboardStats());
+    dispatch(fetchFinanceOverview());
   }, [dispatch]);
 
   // SOCKET — real-time dashboard refresh 
@@ -258,6 +267,33 @@ const DashboardPage = () => {
           </div>
         </div>
       </motion.header>
+
+      {/* INITIAL SETUP BANNER */}
+      {!isInitialized && (
+        <div className="group relative overflow-hidden bg-indigo-600/5 backdrop-blur-xl border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:bg-indigo-600/[0.08]">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-400/10 blur-3xl -mr-10 -mt-10" />
+          <div className="flex items-center gap-5 relative z-10">
+            <div className="h-14 w-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 transform group-hover:rotate-6 transition-transform">
+              <Wallet size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-indigo-950 uppercase tracking-tight">
+                System Initialization Required
+              </h3>
+              <p className="text-sm text-indigo-700/80 font-medium">
+                Your financial tracking is dormant. Set an opening balance to begin auditing.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/finance?tab=setup')}
+            className="rounded-xl px-8 shadow-lg shadow-indigo-200 font-bold relative z-10"
+          >
+            Start Setup
+          </Button>
+        </div>
+      )}
 
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

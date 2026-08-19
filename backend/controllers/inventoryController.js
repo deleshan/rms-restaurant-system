@@ -229,25 +229,34 @@ exports.bulkUploadInventory = async (req, res) => {
       }
 
       let openingValueAdded = 0;
+      let ledgerWarning = null;
+
       if (isInitialSetup && newItems.length) {
         openingValueAdded = newItems.reduce(
           (sum, i) => sum + ((Number(i.currentStock) || 0) * (Number(i.costPerUnit) || 0)), 0
         );
         if (openingValueAdded > 0) {
-          const Transaction = require('../models/Transaction');
-          await Transaction.create({
-            restaurant: restaurantId,
-            user: req.user.id,
-            type: 'ADJUSTMENT',
-            category: 'OPENING_STOCK',
-            amount: openingValueAdded,
-            paymentMethod: 'MULTIPLE',
-            description: `Opening stock (bulk import) — ${newItems.length} item(s)`,
-            isSystemGenerated: true,
-            status: 'COMPLETED',
-            date: new Date(),
-            details: { inventoryValue: openingValueAdded, isInitialSetup: true, referenceNumber: `INV-INIT-${Date.now()}` },
-          });
+          try {
+            const Transaction = require('../models/Transaction');
+            await Transaction.create({
+              restaurant: restaurantId,
+              user: req.user.id,
+              type: 'ADJUSTMENT',
+              category: 'OPENING_STOCK',
+              amount: openingValueAdded,
+              paymentMethod: 'MULTIPLE',
+              description: `Opening stock (bulk import) — ${newItems.length} item(s)`,
+              isSystemGenerated: true,
+              status: 'COMPLETED',
+              date: new Date(),
+              details: { inventoryValue: openingValueAdded, isInitialSetup: true, referenceNumber: `INV-INIT-${Date.now()}` },
+            });
+          } catch (txnErr) {
+            // Items above are already committed via insertMany — a ledger-logging
+            // failure here must never turn a successful import into a 500.
+            console.error('Opening stock Transaction logging failed (non-blocking):', txnErr.message);
+            ledgerWarning = `Items were added (value: LKR ${openingValueAdded.toLocaleString()}), but the ledger entry failed to record: ${txnErr.message}. You may need to log this manually later.`;
+          }
         }
       }
 
@@ -258,6 +267,7 @@ exports.bulkUploadInventory = async (req, res) => {
         skippedNames: skippedItems,
         needsReview,
         openingValueAdded,
+        ledgerWarning,
         message: `${newItems.length} items imported. ${skippedCount} already exist. ${needsReview.length} need review.`
       });
     }
@@ -312,27 +322,33 @@ exports.confirmUSDAMatch = async (req, res) => {
     });
 
     let valueAdded = 0;
+    let ledgerWarning = null;
     if (isInitialSetup) {
       valueAdded = (parseFloat(csvRow.currentStock) || 0) * (parseFloat(csvRow.costPerUnit) || 0);
       if (valueAdded > 0) {
-        const Transaction = require('../models/Transaction');
-        await Transaction.create({
-          restaurant: restaurantId,
-          user: req.user.id,
-          type: 'EXPENSE',
-          category: 'PURCHASE',
-          amount: valueAdded,
-          paymentMethod: 'MULTIPLE',
-          description: `Opening stock: ${item.name}`,
-          isSystemGenerated: true,
-          status: 'COMPLETED',
-          date: new Date(),
-          details: { inventoryValue: valueAdded, isInitialSetup: true, referenceNumber: `INV-INIT-${Date.now()}` },
-        });
+        try {
+          const Transaction = require('../models/Transaction');
+          await Transaction.create({
+            restaurant: restaurantId,
+            user: req.user.id,
+            type: 'ADJUSTMENT',
+            category: 'OPENING_STOCK',
+            amount: valueAdded,
+            paymentMethod: 'MULTIPLE',
+            description: `Opening stock: ${item.name}`,
+            isSystemGenerated: true,
+            status: 'COMPLETED',
+            date: new Date(),
+            details: { inventoryValue: valueAdded, isInitialSetup: true, referenceNumber: `INV-INIT-${Date.now()}` },
+          });
+        } catch (txnErr) {
+          console.error('Opening stock Transaction logging failed (non-blocking):', txnErr.message);
+          ledgerWarning = `Item added (value: LKR ${valueAdded.toLocaleString()}), but the ledger entry failed: ${txnErr.message}.`;
+        }
       }
     }
 
-    res.status(201).json({ success: true, item });
+    res.status(201).json({ success: true, item, valueAdded, ledgerWarning });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

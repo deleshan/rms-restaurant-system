@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { setTableId, setRestaurantId, clearAuthError } from '../features/auth/authSlice'; 
 import { submitInitialForm } from '../features/auth/authThunks';
-import { selectAuthError, selectAuthLoading, selectIsAuthenticated } from '../features/auth/authSelectors';
+import { selectAuthError, selectAuthLoading, selectIsAuthenticated, selectCustomerHomeRestaurantId } from '../features/auth/authSelectors';
 import { cn } from '@/utils/cn';
 
 const InitialForm = () => {
@@ -19,6 +19,7 @@ const InitialForm = () => {
   const loading = useSelector(selectAuthLoading);
   const serverError = useSelector(selectAuthError);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const customerHomeRestaurantId = useSelector(selectCustomerHomeRestaurantId);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,23 +32,28 @@ const InitialForm = () => {
   const [errors, setErrors] = useState({});
 
   // Initialize Session & Clear old errors on mount
-  useEffect(() => {
-      dispatch(clearAuthError());
+ useEffect(() => {
+    dispatch(clearAuthError());
 
-      const currentTable = searchParams.get('t');
-      const currentRestaurant = searchParams.get('rid');
+    const currentTable = searchParams.get('t');
+    const currentRestaurant = searchParams.get('rid');
 
-      if (currentTable) dispatch(setTableId(currentTable));
-      if (currentRestaurant) dispatch(setRestaurantId(currentRestaurant));
+    if (currentTable) dispatch(setTableId(currentTable));
+    if (currentRestaurant) dispatch(setRestaurantId(currentRestaurant));
 
-      // Use the local constants we just grabbed to decide on redirect
-      const effectiveRID = currentRestaurant || restaurantId;
-      const effectiveTID = currentTable || tableId;
+    const effectiveRID = currentRestaurant || restaurantId;
+    const effectiveTID = currentTable || tableId;
+    
+    const belongsToThisRestaurant =
+      isAuthenticated &&
+      customerHomeRestaurantId &&
+      effectiveRID &&
+      customerHomeRestaurantId === effectiveRID;
 
-      if (isAuthenticated && effectiveRID && effectiveTID && effectiveTID !== 'Unknown') {
-        navigate('/menu');
-  }
-}, [dispatch, searchParams, isAuthenticated, navigate, restaurantId, tableId]);
+    if (belongsToThisRestaurant && effectiveRID && effectiveTID && effectiveTID !== 'Unknown') {
+      navigate('/menu');
+    }
+}, [dispatch, searchParams, isAuthenticated, customerHomeRestaurantId, navigate, restaurantId, tableId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
