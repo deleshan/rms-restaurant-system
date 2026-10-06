@@ -121,7 +121,6 @@ export const apiService = {
 
   /**
    * Update order status (Preparing, Ready, Completed, etc.)
-   * FIX: Changed from PUT to PATCH to match your backend route
    * PATCH /api/orders/:id/status
    */
   updateOrderStatus: (orderId, status) =>

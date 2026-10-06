@@ -48,6 +48,27 @@ const BalanceSheetPage = ({settings}) => {
     return Math.abs(assets - lAndE) < 1;
   }, [balanceSheet]);
 
+  const currentRatio = useMemo(() => {
+    const currentAssets = Number(balanceSheet.currentAssets) || 0;
+    const currentLiabilities = Number(balanceSheet.currentLiabilities) || 0;
+    if (currentLiabilities <= 0) return null;
+    return currentAssets / currentLiabilities;
+  }, [balanceSheet.currentAssets, balanceSheet.currentLiabilities]);
+
+  // Display value + liquidity label
+  const currentRatioDisplay = currentRatio === null ? 'N/A' : currentRatio.toFixed(2);
+
+  const currentRatioSubtitle =
+    currentRatio === null
+      ? 'No current liabilities'
+      : currentRatio >= 1.5
+      ? 'Healthy liquidity'
+      : currentRatio >= 1
+      ? 'Adequate liquidity'
+      : 'Low liquidity';
+
+
+
   useEffect(() => {
     const params = dateRange === 'custom' ? { startDate, endDate } : { period: dateRange };
     dispatch(fetchBalanceSheet(params));
@@ -155,12 +176,12 @@ const BalanceSheetPage = ({settings}) => {
             <KPICard title="Total Assets" value={balanceSheet.totalAssets} color="indigo" settings={settings.currency}/>
             <KPICard title="Total Liabilities" value={balanceSheet.totalLiabilities} color="rose" settings={settings.currency} />
             <KPICard title="Net Equity" value={balanceSheet.totalEquity} color="emerald" settings={settings.currency}/>
-            <KPICard 
-              title="Current Ratio" 
-              value={(balanceSheet.currentAssets / balanceSheet.currentLiabilities).toFixed(2)} 
-              isCurrency={false} 
+            <KPICard
+              title="Current Ratio"
+              value={currentRatioDisplay}
+              isCurrency={false}
               color="amber"
-              subtitle="Liquidity Health"
+              subtitle={currentRatioSubtitle}
             />
           </div>
 

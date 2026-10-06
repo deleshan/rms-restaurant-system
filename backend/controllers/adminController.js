@@ -25,13 +25,11 @@ const getCustomers = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized: No Restaurant ID" });
     }
 
-    // FLEXIBLE ID MATCHING
-    // This allows matching "699d52..." (ObjectId) AND "RES-DEVELOPMENT-ID" (String)
     let restaurantIdQuery;
     if (mongoose.Types.ObjectId.isValid(rawId)) {
       restaurantIdQuery = new mongoose.Types.ObjectId(rawId);
     } else {
-      restaurantIdQuery = rawId; 
+      restaurantIdQuery = rawId; // dev purpose
     }
 
     // Build the Query

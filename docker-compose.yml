@@ -2,7 +2,7 @@
 services:
   backend:
     build: ./backend
-    container_name: restosync-backend
+    container_name: neodemeter-backend
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -18,7 +18,7 @@ services:
 
   python-ai-service:
     build: ./python-ai-service
-    container_name: restosync-ai
+    container_name: neodemeter-ai
     restart: unless-stopped
     ports:
       - "5001:5001"
@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: frontend.Dockerfile
-    container_name: restosync-frontend
+    container_name: neodemeter-frontend
     restart: unless-stopped
     ports:
       - "80:80"

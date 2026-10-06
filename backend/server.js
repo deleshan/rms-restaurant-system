@@ -100,7 +100,7 @@ app.use('/api/reviews',    require('./routes/reviews'));
 app.use('/api/tables',     tableRoutes);
 
 
-app.get('/', (req, res) => res.send('RestoSync API is Active'));
+app.get('/', (req, res) => res.send('Neodemeter API is Active'));
 
 
 

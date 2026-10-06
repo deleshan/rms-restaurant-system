@@ -24,7 +24,7 @@ const registerCustomer = async (req, res) => {
     let customer;
 
     if (existingCustomer) {
-      // RETURNING CUSTOMER — always accept whatever name they typed this time,
+      // RETURNING CUSTOMER - always accept whatever name they typed this time,
       // even if it doesn't match what's on file. Never reject on mismatch.
       const updateFields = {
         name: name.trim(),
@@ -56,7 +56,7 @@ const registerCustomer = async (req, res) => {
       } catch (createErr) {
         // Genuine race (two simultaneous first-time check-ins for the same
         // phone+restaurant) hits the compound unique index. Recover instead
-        // of failing — treat it as a returning customer.
+        // of failing - treat it as a returning customer.
         if (createErr.code === 11000) {
           customer = await Customer.findOneAndUpdate(
             { phone: normalizedPhone, restaurantId },

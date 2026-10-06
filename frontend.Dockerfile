@@ -1,4 +1,4 @@
-# ---- Admin ----
+# Admin 
 FROM node:20-alpine AS admin-build
 WORKDIR /app
 COPY admin-dashboard/package*.json ./
@@ -8,7 +8,7 @@ ENV VITE_API_URL=/api
 ENV VITE_CUSTOMER_URL=http://localhost
 RUN npm run build
 
-# ---- Kitchen (KDS) ----
+# Kitchen (KDS)
 FROM node:20-alpine AS kds-build
 WORKDIR /app
 COPY cooking-dashboard/package*.json ./
@@ -17,7 +17,7 @@ COPY cooking-dashboard/ .
 ENV VITE_API_URL=/api
 RUN npm run build
 
-# ---- Customer QR ----
+# Customer QR 
 FROM node:20-alpine AS customer-build
 WORKDIR /app
 COPY customer-qr-app/package*.json ./
@@ -26,7 +26,7 @@ COPY customer-qr-app/ .
 ENV VITE_API_URL=/api
 RUN npm run build
 
-# ---- Final: Nginx serving all three ----
+# Final: Nginx serving all three 
 FROM nginx:alpine
 COPY --from=admin-build /app/dist /usr/share/nginx/html/admin
 COPY --from=kds-build /app/dist /usr/share/nginx/html/kds

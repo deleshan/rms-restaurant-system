@@ -238,7 +238,7 @@ def analyze_bulk_reviews():
                             "textSegment": clause
                         })
                 else:
-                    # Multiple items packed into one clause — score each independently
+                    # Multiple items packed into one clause - score each independently
                     for food, segment_text in item_segments:
                         clean_segment = segment_text.lower()
                         res = analyzer.polarity_scores(segment_text)
