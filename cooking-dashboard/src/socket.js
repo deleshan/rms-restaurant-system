@@ -5,7 +5,9 @@ import { socketNotificationReceived } from './features/notifications/notificatio
 import { fetchNotifications } from './features/notifications/notificationThunks';
 
 
-const SOCKET_URL = import.meta.env.PROD ? window.location.origin : 'http://localhost:5000';
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000')
 
 
 console.log("Connecting to Socket at:", SOCKET_URL);
