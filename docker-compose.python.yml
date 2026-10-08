@@ -1,0 +1,9 @@
+services:
+  python-ai-service:
+    build: ./python-ai-service
+    container_name: neodemeter-ai
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./python-ai-service/.env

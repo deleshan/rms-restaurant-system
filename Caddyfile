@@ -1,0 +1,3 @@
+neodemeter-api.duckdns.org {
+    reverse_proxy backend:5000
+}

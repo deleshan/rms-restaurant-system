@@ -22,4 +22,4 @@ EXPOSE 5001
 
 # gunicorn imports the `app` object directly — your `if __name__ == '__main__': app.run(debug=True)`
 # block never executes, so debug mode is never live in this container.
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5001", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5001", "--timeout", "120", "app:app"]
